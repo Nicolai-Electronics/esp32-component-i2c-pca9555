@@ -36,7 +36,7 @@ typedef struct PCA9555 {
     xSemaphoreHandle mux;
 } PCA9555;
 
-extern esp_err_t pca9555_init(PCA9555* device);
+extern esp_err_t pca9555_init(PCA9555* device, int i2c_bus, int i2c_address, int pin_interrupt);
 extern esp_err_t pca9555_destroy(PCA9555* device);
 
 extern void pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler);
