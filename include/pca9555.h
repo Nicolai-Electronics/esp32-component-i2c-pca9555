@@ -1,6 +1,7 @@
 #pragma once
 
 #include <esp_err.h>
+#include <esp_log.h>
 #include <stdint.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -36,16 +37,16 @@ typedef struct PCA9555 {
     xSemaphoreHandle mux;
 } PCA9555;
 
-extern esp_err_t pca9555_init(PCA9555* device, int i2c_bus, int i2c_address, int pin_interrupt);
-extern esp_err_t pca9555_destroy(PCA9555* device);
+esp_err_t pca9555_init(PCA9555* device, int i2c_bus, int i2c_address, int pin_interrupt);
+esp_err_t pca9555_destroy(PCA9555* device);
 
-extern void pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler);
+esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction);
+esp_err_t pca9555_get_gpio_direction(PCA9555* device, int pin, bool* direction);
 
-extern esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction);
-extern esp_err_t pca9555_get_gpio_direction(PCA9555* device, int pin, bool* direction);
+esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity);
+esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity);
 
-extern esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity);
-extern esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity);
+esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value);
+esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value);
 
-extern esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value);
-extern esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value);
+esp_err_t pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler);

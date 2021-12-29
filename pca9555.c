@@ -5,7 +5,11 @@
  */
 
 #include <sdkconfig.h>
-#include "managed_i2c.h" // from esp32-component-bus-i2c
+#include <driver/gpio.h>
+#include "pca9555.h"
+#include "managed_i2c.h"
+
+static const char *TAG = "PCA9555";
 
 void pca9555_intr_task(void *arg) {
     PCA9555* device = (PCA9555*) arg;
@@ -14,9 +18,9 @@ void pca9555_intr_task(void *arg) {
     
     while (1) {
         if (xSemaphoreTake(device->intr_trigger, portMAX_DELAY)) {
-            esp_err_t res = river_i2c_read_reg(device->i2c_bus, device->i2c_address, PCA9555_REG_INPUT_0, data, 2);
+            esp_err_t res = i2c_read_reg(device->i2c_bus, device->i2c_address, PCA9555_REG_INPUT_0, data, 2);
             if (res != ESP_OK) {
-                ESP_LOGE(TAG, "PCA9555: failed to read input state");
+                ESP_LOGE(TAG, "failed to read input state");
                 continue;
             }
             uint16_t current_state = data[0] + (data[1] << 8);
@@ -32,6 +36,7 @@ void pca9555_intr_task(void *arg) {
             vTaskDelay(10 / portTICK_PERIOD_MS);
             previous_state = current_state;
         }
+    }
 }
 
 void pca9555_intr_handler(void *arg) {
@@ -54,12 +59,14 @@ esp_err_t pca9555_init(PCA9555* device, int i2c_bus, int i2c_address, int pin_in
     device->reg_polarity[1]  = 0x00;
     device->reg_output[0]    = 0x00; // Set value of output flipflops to LOW (0)
     device->reg_output[1]    = 0x00;
-    
-    res = driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_CONFIG_0, device->reg_direction, 2);
+
+    res = i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_CONFIG_0, device->reg_direction, 2);
     if (res != ESP_OK) return res;
-    res = driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_POLARITY_0, device->reg_polarity, 2);
+
+    res = i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_POLARITY_0, device->reg_polarity, 2);
     if (res != ESP_OK) return res;
-    res = driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_OUTPUT_0, device->reg_output, 2);
+
+    res = i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_OUTPUT_0, device->reg_output, 2);
     if (res != ESP_OK) return res;
 
     //Create mutex
@@ -120,6 +127,7 @@ esp_err_t pca9555_destroy(PCA9555* device) {
     }
     vSemaphoreDelete(device->mux);
     vSemaphoreDelete(device->intr_trigger);
+    return ESP_OK;
 }
 
 esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction) {
@@ -131,7 +139,7 @@ esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction) {
     } else {
         device->reg_direction[port] |= (1 << bit); //Set the pin to input
     }
-    return driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_CONFIG_0, device->reg_direction, 2);
+    return i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_CONFIG_0, device->reg_direction, 2);
 }
 
 esp_err_t pca9555_get_gpio_direction(PCA9555* device, int pin, bool* direction) {
@@ -148,11 +156,11 @@ esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity) {
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     if (polarity) {
-        device->reg_polarity[port] &= ~(1 << bit); //Set the pin to output
+        device->reg_polarity[port] |= (1 << bit);
     } else {
-        device->reg_polarity[port] |= (1 << bit); //Set the pin to input
+        device->reg_polarity[port] &= ~(1 << bit);
     }
-    return driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_POLARITY_0, device->reg_polarity, 2);
+    return i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_POLARITY_0, device->reg_polarity, 2);
 }
 
 esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity) {
@@ -160,7 +168,7 @@ esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity) {
     if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
-    *polarity = ((reg_polarity[port] >> bit) & 1) ? PCA9555_POL_NORMAL : PCA9555_POL_INVERTED;
+    *polarity = ((device->reg_polarity[port] >> bit) & 1) ? PCA9555_POL_NORMAL : PCA9555_POL_INVERTED;
     return ESP_OK;
 }
 
@@ -177,7 +185,7 @@ esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value) {
     } else {
         device->reg_output[port] &= ~(1 << bit);
     }
-    return driver_i2c_write_reg_n(device->i2c_bus, device->i2c_address, port ? PCA9555_REG_OUTPUT_1 : PCA9555_REG_OUTPUT_0, &device->reg_output[port], 1);
+    return i2c_write_reg_n(device->i2c_bus, device->i2c_address, port ? PCA9555_REG_OUTPUT_1 : PCA9555_REG_OUTPUT_0, &device->reg_output[port], 1);
 }
 
 esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value) {
@@ -195,8 +203,16 @@ esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value) {
         reg = port ? PCA9555_REG_INPUT_1 : PCA9555_REG_INPUT_0;
     }
     uint8_t reg_value;
-    res = river_i2c_read_reg(device->i2c_bus, device->i2c_address, reg, &reg_value, 1);
+    res = i2c_read_reg(device->i2c_bus, device->i2c_address, reg, &reg_value, 1);
     if (res != ESP_OK) return ESP_FAIL;
     *value = (reg_value>>bit) & 1;
+    return ESP_OK;
+}
+
+esp_err_t pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler) {
+    if ((pin < 0) || (pin > 15)) return ESP_FAIL;
+    xSemaphoreTake(device->mux, portMAX_DELAY);
+    device->intr_handler[pin] = handler;
+    xSemaphoreGive(device->mux);
     return ESP_OK;
 }
