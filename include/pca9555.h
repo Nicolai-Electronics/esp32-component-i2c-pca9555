@@ -28,6 +28,7 @@ typedef struct PCA9555 {
     int              i2c_bus;
     int              i2c_address;
     int              pin_interrupt;
+    uint16_t         pin_state;
     uint8_t          reg_direction[2];
     uint8_t          reg_polarity[2];
     uint8_t          reg_output[2];

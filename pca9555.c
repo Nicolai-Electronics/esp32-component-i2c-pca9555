@@ -13,7 +13,6 @@ static const char *TAG = "PCA9555";
 
 void pca9555_intr_task(void *arg) {
     PCA9555* device = (PCA9555*) arg;
-    uint16_t previous_state = 0;
     uint8_t data[] = {0,0};
     
     while (1) {
@@ -25,7 +24,7 @@ void pca9555_intr_task(void *arg) {
             }
             uint16_t current_state = data[0] + (data[1] << 8);
             for (int pin = 0; pin < 16; pin++) {
-                if ((current_state & (1 << pin)) != (previous_state & (1 << pin))) {
+                if ((current_state & (1 << pin)) != (device->pin_state & (1 << pin))) {
                     bool value = (current_state & (1 << pin)) > 0;
                     xSemaphoreTake(device->mux, portMAX_DELAY);
                     pca9555_intr_t handler = device->intr_handler[pin];
@@ -34,7 +33,7 @@ void pca9555_intr_task(void *arg) {
                 }
             }
             vTaskDelay(10 / portTICK_PERIOD_MS);
-            previous_state = current_state;
+            device->pin_state = current_state;
         }
     }
 }
