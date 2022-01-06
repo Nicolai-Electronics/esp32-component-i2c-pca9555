@@ -41,13 +41,13 @@ typedef struct PCA9555 {
 esp_err_t pca9555_init(PCA9555* device, int i2c_bus, int i2c_address, int pin_interrupt);
 esp_err_t pca9555_destroy(PCA9555* device);
 
-esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction);
-esp_err_t pca9555_get_gpio_direction(PCA9555* device, int pin, bool* direction);
+esp_err_t pca9555_set_gpio_direction(PCA9555* device, uint8_t pin, bool direction);
+esp_err_t pca9555_get_gpio_direction(PCA9555* device, uint8_t pin, bool* direction);
 
-esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity);
-esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity);
+esp_err_t pca9555_set_gpio_polarity(PCA9555* device, uint8_t pin, bool polarity);
+esp_err_t pca9555_get_gpio_polarity(PCA9555* device, uint8_t pin, bool* polarity);
 
-esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value);
-esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value);
+esp_err_t pca9555_set_gpio_value(PCA9555* device, uint8_t pin, bool value);
+esp_err_t pca9555_get_gpio_value(PCA9555* device, uint8_t pin, bool* value);
 
 esp_err_t pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler);

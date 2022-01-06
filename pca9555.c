@@ -23,7 +23,7 @@ void pca9555_intr_task(void *arg) {
                 continue;
             }
             uint16_t current_state = data[0] + (data[1] << 8);
-            for (int pin = 0; pin < 16; pin++) {
+            for (uint8_t pin = 0; pin < 16; pin++) {
                 if ((current_state & (1 << pin)) != (device->pin_state & (1 << pin))) {
                     bool value = (current_state & (1 << pin)) > 0;
                     xSemaphoreTake(device->mux, portMAX_DELAY);
@@ -129,8 +129,8 @@ esp_err_t pca9555_destroy(PCA9555* device) {
     return ESP_OK;
 }
 
-esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction) {
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+esp_err_t pca9555_set_gpio_direction(PCA9555* device, uint8_t pin, bool direction) {
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     if (direction) {
@@ -141,17 +141,17 @@ esp_err_t pca9555_set_gpio_direction(PCA9555* device, int pin, bool direction) {
     return i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_CONFIG_0, device->reg_direction, 2);
 }
 
-esp_err_t pca9555_get_gpio_direction(PCA9555* device, int pin, bool* direction) {
+esp_err_t pca9555_get_gpio_direction(PCA9555* device, uint8_t pin, bool* direction) {
     if (direction == NULL) return ESP_FAIL;
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     *direction = ((device->reg_direction[port] >> bit) & 1) ? PCA9555_DIR_IN : PCA9555_DIR_OUT;
     return ESP_OK;
 }
 
-esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity) {
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+esp_err_t pca9555_set_gpio_polarity(PCA9555* device, uint8_t pin, bool polarity) {
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     if (polarity) {
@@ -162,17 +162,17 @@ esp_err_t pca9555_set_gpio_polarity(PCA9555* device, int pin, bool polarity) {
     return i2c_write_reg_n(device->i2c_bus, device->i2c_address, PCA9555_REG_POLARITY_0, device->reg_polarity, 2);
 }
 
-esp_err_t pca9555_get_gpio_polarity(PCA9555* device, int pin, bool* polarity) {
+esp_err_t pca9555_get_gpio_polarity(PCA9555* device, uint8_t pin, bool* polarity) {
     if (polarity == NULL) return ESP_FAIL;
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     *polarity = ((device->reg_polarity[port] >> bit) & 1) ? PCA9555_POL_NORMAL : PCA9555_POL_INVERTED;
     return ESP_OK;
 }
 
-esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value) {
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+esp_err_t pca9555_set_gpio_value(PCA9555* device, uint8_t pin, bool value) {
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     bool direction;
@@ -187,9 +187,9 @@ esp_err_t pca9555_set_gpio_value(PCA9555* device, int pin, bool value) {
     return i2c_write_reg_n(device->i2c_bus, device->i2c_address, port ? PCA9555_REG_OUTPUT_1 : PCA9555_REG_OUTPUT_0, &device->reg_output[port], 1);
 }
 
-esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value) {
+esp_err_t pca9555_get_gpio_value(PCA9555* device, uint8_t pin, bool* value) {
     if (value == NULL) return ESP_FAIL;
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL; //Out of range
+    if (pin > 15) return ESP_FAIL; //Out of range
     uint8_t port = (pin >= 8) ? 1 : 0;
     uint8_t bit  = pin % 8;
     bool direction;
@@ -209,7 +209,9 @@ esp_err_t pca9555_get_gpio_value(PCA9555* device, int pin, bool* value) {
 }
 
 esp_err_t pca9555_set_interrupt_handler(PCA9555* device, uint8_t pin, pca9555_intr_t handler) {
-    if ((pin < 0) || (pin > 15)) return ESP_FAIL;
+    if (pin > 15) {
+        return ESP_FAIL;
+    }
     xSemaphoreTake(device->mux, portMAX_DELAY);
     device->intr_handler[pin] = handler;
     xSemaphoreGive(device->mux);
